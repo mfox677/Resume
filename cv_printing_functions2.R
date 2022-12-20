@@ -26,19 +26,21 @@ create_CV_object <-  function(data_location,
   is_google_sheets_location <- stringr::str_detect(data_location, "docs\\.google\\.com")
 
   if(is_google_sheets_location){
-    if(sheet_is_publicly_readable){
-      # This tells google sheets to not try and authenticate. Note that this will only
-      # work if your sheet has sharing set to "anyone with link can view"
-      googlesheets4::gs4_deauth()
-    } else {
-      # My info is in a public sheet so there's no need to do authentication but if you want
-      # to use a private sheet, then this is the way you need to do it.
-      # designate project-specific cache so we can render Rmd without problems
+    # If the sheet is not publicly readable, then authenticate and read data using the read_sheet() function
+    if(!sheet_is_publicly_readable){
+      # Designate project-specific cache so we can render Rmd without problems
       options(gargle_oauth_cache = ".secrets")
-    }
-
-    read_gsheet <- function(sheet_id){
-      googlesheets4::read_sheet(data_location, sheet = sheet_id, skip = 1, col_types = "c")
+      # Authenticate with Google
+      gargle::gar_auth()
+      read_gsheet <- function(sheet_id){
+        googlesheets4::read_sheet(data_location, sheet = sheet_id, skip = 1, col_types = "c")
+      }
+    } else {
+      # If the sheet is publicly readable, then use the gs4_deauth() function to disable authentication
+      googlesheets4::gs4_deauth()
+      read_gsheet <- function(sheet_id){
+        googlesheets4::read_sheet(data_location, sheet = sheet_id, skip = 1, col_types = "c")
+      }
     }
     cv$entries_data  <- read_gsheet(sheet_id = "entries")
     cv$skills        <- read_gsheet(sheet_id = "language_skills")
@@ -48,9 +50,8 @@ create_CV_object <-  function(data_location,
     # Want to go old-school with csvs?
     cv$entries_data <- readr::read_csv(paste0(data_location, "entries.csv"), skip = 1)
     cv$skills       <- readr::read_csv(paste0(data_location, "language_skills.csv"), skip = 1)
-    cv$text_blocks  <- readr::read_csv(paste0(data_location, "text_blocks.csv"), skip = 1)
-    cv$contact_info <- readr::read_csv(paste0(data_location, "contact_info.csv"), skip = 1)
-  }
+    cv$text_blocks  <- readr::
+
 
 
   extract_year <- function(dates){
